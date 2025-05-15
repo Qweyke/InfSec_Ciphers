@@ -1,92 +1,92 @@
 import random
 
-from auxiliary import LATIN_ALP_LEN, read_file, write_file, preview_files
+from auxiliary import read_file, write_file, preview_files, RU_ALPHABET_CAP, RU_ALPHABET_LOW
 
 
-def generate_vigenere_matrix(toss_letters: bool, capital_letters: bool):
-    alphabet = []
-    first_letter = 'A' if capital_letters else 'a'
-    first_letter_ascii = ord(first_letter)
-
-    for pos in range(LATIN_ALP_LEN):
-        alphabet.append(chr(first_letter_ascii + pos))
-
+def generate_vigenere_matrix(toss_letters=False, capital_letters=False):
+    alphabet = RU_ALPHABET_CAP if capital_letters else RU_ALPHABET_LOW
+    alphabet = alphabet.copy()
     if toss_letters:
         random.shuffle(alphabet)
 
     v_matrix = []
 
-
-    print("Vigenere matrix")
-    for i, letter in enumerate(alphabet):
+    print("Vigenere matrix:")
+    for i in range(len(alphabet)):
         row = alphabet[i:] + alphabet[:i]
         v_matrix.append(row)
-        print(row)
+        print(''.join(row))
 
     return v_matrix
 
-def encrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
 
+def get_alphabet_and_index(char):
+    alphabet = RU_ALPHABET_CAP if char.isupper() else RU_ALPHABET_LOW
+    return alphabet.index(char)
+
+
+def encrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
     original_text = read_file(file_path)
 
     encrypted_list = []
 
-
     current_key_pos = -1
     key_len = len(key_str)
+
     for char in original_text:
-        if char.isalpha():
-            is_upper_char = char.isupper()
-            char_index = ord(char) - ord('A' if is_upper_char else 'a')
-
+        if char.lower() in RU_ALPHABET_LOW:
             current_key_pos = (current_key_pos + 1) % key_len
-
             key_letter = key_str[current_key_pos]
-            is_upper_key = key_letter.isupper()
 
-            key_index = ord(key_letter) - ord('A' if is_upper_key else 'a')
+            char_index = get_alphabet_and_index(char)
+            key_index = get_alphabet_and_index(key_letter)
 
-            encrypted_list.append(v_matrix[key_index][char_index])
+            encrypted_char = v_matrix[key_index][char_index]
+            if char.isupper():
+                encrypted_char = encrypted_char.upper()
+            encrypted_list.append(encrypted_char)
         else:
             encrypted_list.append(char)
 
-    encrypted_text = ''.join(encrypted_list)
-    return encrypted_text
+    return ''.join(encrypted_list)
 
 
 def decrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
     original_text = read_file(file_path)
 
-    encrypted_list = []
+    decrypted_list = []
 
     current_key_pos = -1
     key_len = len(key_str)
+
     for char in original_text:
-        if char.isalpha():
+        if char.lower() in RU_ALPHABET_LOW:
             current_key_pos = (current_key_pos + 1) % key_len
             key_letter = key_str[current_key_pos]
-            is_upper_key = key_letter.isupper()
 
-            key_index = ord(key_letter) - ord('A' if is_upper_key else 'a')
+            key_index = get_alphabet_and_index(key_letter)
+            alphabet = RU_ALPHABET_CAP if char.isupper() else RU_ALPHABET_LOW
+            row = v_matrix[key_index]
+            col_index = row.index(char.lower())
+            decrypted_char = alphabet[col_index]
+            if char.isupper():
+                decrypted_char = decrypted_char.upper()
 
-            is_upper_char = char.isupper()
-            char_index = v_matrix[key_index].index(char.upper() if is_upper_char else char.lower())
-            encrypted_list.append(v_matrix[0][char_index])
-
+            decrypted_list.append(decrypted_char)
         else:
-            encrypted_list.append(char)
+            decrypted_list.append(char)
 
-    encrypted_text = ''.join(encrypted_list)
-    return encrypted_text
+    return ''.join(decrypted_list)
+
 
 if __name__ == "__main__":
     file_name = "test.txt"
     encV = f"encV_{file_name}"
     decV = f"decV_{file_name}"
 
-    key = "hello"
+    key = "ключ"
 
-    matrix = generate_vigenere_matrix(False, capital_letters=False)
+    matrix = generate_vigenere_matrix(toss_letters=False, capital_letters=False)
     write_file(encV, encrypt_msg_by_vigenere(file_name, key, matrix))
     write_file(decV, decrypt_msg_by_vigenere(encV, key, matrix))
 

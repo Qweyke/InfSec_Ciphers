@@ -1,9 +1,16 @@
-
 LATIN_ALP_LEN = 26
+CYRILLIC_ALP_LEN = 33
+
+ALPH_LENGTH = CYRILLIC_ALP_LEN
+
+RU_ALPHABET_LOW = list("абвгдеёжзийклмнопрстуфхцчшщъыьэюя")
+RU_ALPHABET_CAP = list("АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
+
 
 def read_file(file_path):
     with open(f'../{file_path}', 'r', encoding='utf-8') as opened_file:
         return opened_file.read()
+
 
 def write_file(file_path, text):
     with open(f'../{file_path}', 'w', encoding='utf-8') as opened_file:
