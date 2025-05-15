@@ -27,7 +27,7 @@ def get_alphabet_and_index(char):
     return alphabet.index(char)
 
 
-def encrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
+def encrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix: list[list[str]]):
     original_text = read_file(file_path)
 
     encrypted_list = []
@@ -53,7 +53,7 @@ def encrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
     return ''.join(encrypted_list)
 
 
-def decrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
+def decrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix: list[list[str]]):
     original_text = read_file(file_path)
 
     decrypted_list = []
@@ -81,64 +81,75 @@ def decrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix):
     return ''.join(decrypted_list)
 
 
-def crack_vigenere_cipher(file_path: str, v_matrix):
-    def calculate_coincidence_index(text):
-        norm_text = normalize_text(text)
-        norm_text_len = len(norm_text)
-        freqs = Counter(norm_text)
+def crack_vigenere_cipher(file_path: str, v_matrix: list[list[str]]):
+    def calculate_coincidence_index(text_block):
+        freqs = Counter(text_block)
+        norm_text_len = len(text_block)
 
-        for letter, freq in freqs:
+        conc_index = 0
+        for letter in freqs:
+            conc_index += (freqs[letter] / norm_text_len) * (freqs[letter] / norm_text_len)
 
+        return conc_index
 
-        return sum(f * (f - 1) for f in freqs.values()) / (text_len * (text_len - 1)) if text_len > 1 else 0
+    # def calculate_key_length(normalized_text):
+    #     print(f"{calculate_coincidence_index(RU_ALPHABET_LOW)}")
+    #
+    #
+    #     for i in range(len(normalized_text)):
 
-    def find_key_length(text, max_key_len=20):
-        text = [c for c in text if c in RU_ALPHABET_LOW]
-        avg_ics = []
-        for key_len in range(1, max_key_len + 1):
-            ics = []
-            for i in range(key_len):
-                group = text[i::key_len]
-                ic = index_of_coincidence(group)
-                ics.append(ic)
-            avg_ics.append((key_len, sum(ics) / len(ics)))
-        likely_key_len = max(avg_ics, key=lambda x: x[1])[0]
-        print("Average ICs by key length:", avg_ics)
-        print(f"Likely key length: {likely_key_len}")
-        return likely_key_len
+    # def find_key_length(text, max_key_len=20):
+    #     text = [c for c in text if c in RU_ALPHABET_LOW]
+    #     avg_ics = []
+    #     for key_len in range(1, max_key_len + 1):
+    #         ics = []
+    #         for i in range(key_len):
+    #             group = text[i::key_len]
+    #             ic = index_of_coincidence(group)
+    #             ics.append(ic)
+    #         avg_ics.append((key_len, sum(ics) / len(ics)))
+    #     likely_key_len = max(avg_ics, key=lambda x: x[1])[0]
+    #     print("Average ICs by key length:", avg_ics)
+    #     print(f"Likely key length: {likely_key_len}")
+    #     return likely_key_len
+    #
+    # def split_text_by_key_length(text, key_len):
+    #     return [text[i::key_len] for i in range(key_len)]
+    #
+    # def guess_key(text, key_len):
+    #     text = [c for c in text if c in RU_ALPHABET_LOW]
+    #     groups = split_text_by_key_length(text, key_len)
+    #     v_key = ''
+    #
+    #     # Частая буква — 'о'
+    #     common_letter = 'о'
+    #     ru_index = RU_ALPHABET_LOW.index(common_letter)
+    #
+    #     for group in groups:
+    #         if not group:
+    #             v_key += 'а'  # fallback
+    #             continue
+    #         freqs = Counter(group)
+    #         most_common_letter = freqs.most_common(1)[0][0]
+    #         letter_index = RU_ALPHABET_LOW.index(most_common_letter)
+    #         shift = (letter_index - ru_index) % len(RU_ALPHABET_LOW)
+    #         key_letter = RU_ALPHABET_LOW[shift]
+    #         v_key += key_letter
+    #     return v_key
 
-    def split_text_by_key_length(text, key_len):
-        return [text[i::key_len] for i in range(key_len)]
-
-    def guess_key(text, key_len):
-        text = [c for c in text if c in RU_ALPHABET_LOW]
-        groups = split_text_by_key_length(text, key_len)
-        v_key = ''
-
-        # Частая буква — 'о'
-        common_letter = 'о'
-        ru_index = RU_ALPHABET_LOW.index(common_letter)
-
-        for group in groups:
-            if not group:
-                v_key += 'а'  # fallback
-                continue
-            freqs = Counter(group)
-            most_common_letter = freqs.most_common(1)[0][0]
-            letter_index = RU_ALPHABET_LOW.index(most_common_letter)
-            shift = (letter_index - ru_index) % len(RU_ALPHABET_LOW)
-            key_letter = RU_ALPHABET_LOW[shift]
-            v_key += key_letter
-        return v_key
+    print(f"CI for plain cyrillic alphabet: {calculate_coincidence_index(read_file("big_russian.txt"))}")
 
     encrypted_text = read_file(file_path)
-    key_len = find_key_length(encrypted_text)
-    v_key = guess_key(encrypted_text, key_len)
+    norm_text = normalize_text(encrypted_text)
 
-    # Дешифруем, передав текст как файл
-    decrypted = decrypt_msg_by_vigenere(file_path, v_key, v_matrix)
-    print(f"Guessed key: {v_key}")
-    return decrypted
+    # key_len = find_key_length(norm_text)
+    #
+    # v_key = guess_key(encrypted_text, key_len)
+    #
+    # # Дешифруем, передав текст как файл
+    # decrypted = decrypt_msg_by_vigenere(file_path, v_key, v_matrix)
+    # print(f"Guessed key: {v_key}")
+    # return decrypted
 
 
 if __name__ == "__main__":
