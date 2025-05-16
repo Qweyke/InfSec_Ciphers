@@ -127,9 +127,6 @@ def crack_vigenere_cipher(file_path: str):
             blocks.append(block)
 
         ru_letter_freq, _ = analyze_text_file("big_russian.txt")
-        top_russian_letters = [l for l, _ in ru_letter_freq.most_common(3)]
-        key_candidates = []
-
         most_common_ru_letter = ru_letter_freq.most_common(1)[0][0]
         most_common_ru_letter_index = RU_ALPHABET_LOW.index(most_common_ru_letter)
 
@@ -154,15 +151,6 @@ def crack_vigenere_cipher(file_path: str):
     key_found = decrypt_key(k_len, norm_text)
     print(f"Found key: {key_found}")
     return key_found
-
-    # key_len = find_key_length(norm_text)
-    #
-    # v_key = guess_key(encrypted_text, key_len)
-    #
-    # # Дешифруем, передав текст как файл
-    # decrypted = decrypt_msg_by_vigenere(file_path, v_key, v_matrix)
-    # print(f"Guessed key: {v_key}")
-    # return decrypted
 
 
 if __name__ == "__main__":
