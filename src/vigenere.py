@@ -2,7 +2,7 @@ import random
 from collections import Counter
 
 from auxiliary import read_file, write_file, preview_files, RU_ALPHABET_CAP, RU_ALPHABET_LOW
-from src.freq_analyzer import normalize_text
+from src.freq_analyzer import normalize_text, count_letter_frequencies, analyze_text_file
 
 
 def generate_vigenere_matrix(toss_letters=False, capital_letters=False):
@@ -81,8 +81,8 @@ def decrypt_msg_by_vigenere(file_path: str, key_str: str, v_matrix: list[list[st
     return ''.join(decrypted_list)
 
 
-def crack_vigenere_cipher(file_path: str, v_matrix: list[list[str]]):
-    def calculate_coincidence_index(text_block):
+def crack_vigenere_cipher(file_path: str):
+    def calculate_coincidence_index(text_block: str) -> float:
         freqs = Counter(text_block)
         norm_text_len = len(text_block)
 
@@ -92,55 +92,68 @@ def crack_vigenere_cipher(file_path: str, v_matrix: list[list[str]]):
 
         return conc_index
 
-    # def calculate_key_length(normalized_text):
-    #     print(f"{calculate_coincidence_index(RU_ALPHABET_LOW)}")
-    #
-    #
-    #     for i in range(len(normalized_text)):
+    def calculate_key_length(normalized_text: str, key_len_limit: int = 20):
+        ci_plain_text = calculate_coincidence_index(read_file("big_russian.txt"))
+        ci_poly_encrypted_text = calculate_coincidence_index(read_file("encV_test.txt"))
+        print(
+            f"CI for plain cyrillic alphabet: {ci_plain_text}, CI for poly alphabet encrypted text: {ci_poly_encrypted_text}")
 
-    # def find_key_length(text, max_key_len=20):
-    #     text = [c for c in text if c in RU_ALPHABET_LOW]
-    #     avg_ics = []
-    #     for key_len in range(1, max_key_len + 1):
-    #         ics = []
-    #         for i in range(key_len):
-    #             group = text[i::key_len]
-    #             ic = index_of_coincidence(group)
-    #             ics.append(ic)
-    #         avg_ics.append((key_len, sum(ics) / len(ics)))
-    #     likely_key_len = max(avg_ics, key=lambda x: x[1])[0]
-    #     print("Average ICs by key length:", avg_ics)
-    #     print(f"Likely key length: {likely_key_len}")
-    #     return likely_key_len
-    #
-    # def split_text_by_key_length(text, key_len):
-    #     return [text[i::key_len] for i in range(key_len)]
-    #
-    # def guess_key(text, key_len):
-    #     text = [c for c in text if c in RU_ALPHABET_LOW]
-    #     groups = split_text_by_key_length(text, key_len)
-    #     v_key = ''
-    #
-    #     # Частая буква — 'о'
-    #     common_letter = 'о'
-    #     ru_index = RU_ALPHABET_LOW.index(common_letter)
-    #
-    #     for group in groups:
-    #         if not group:
-    #             v_key += 'а'  # fallback
-    #             continue
-    #         freqs = Counter(group)
-    #         most_common_letter = freqs.most_common(1)[0][0]
-    #         letter_index = RU_ALPHABET_LOW.index(most_common_letter)
-    #         shift = (letter_index - ru_index) % len(RU_ALPHABET_LOW)
-    #         key_letter = RU_ALPHABET_LOW[shift]
-    #         v_key += key_letter
-    #     return v_key
+        # Gather all CI for key_len in range key_len_limit
+        overall_ci_list: dict[str: float] = {}
+        for key_len in range(1, key_len_limit + 1):
 
-    print(f"CI for plain cyrillic alphabet: {calculate_coincidence_index(read_file("big_russian.txt"))}")
+            # Calculate each key len for current i-value
+            len_goups_ci_list: list[float] = []
 
+            # Start from first text letter with shift of key_len = 1 and so on
+            for shift_val in range(key_len):
+                symbol_block: str = normalized_text[shift_val::key_len]
+                key_len_group_ci: float = calculate_coincidence_index(symbol_block)
+                len_goups_ci_list.append(key_len_group_ci)
+
+            curr_len_final_ci = sum(len_goups_ci_list) / key_len
+            overall_ci_list[key_len] = curr_len_final_ci
+
+        for key_len, ci_value in overall_ci_list.items():
+            threshold = (ci_plain_text + ci_poly_encrypted_text) / 2
+            if ci_value > threshold:
+                print(f"Key len {key_len} with CI = {ci_value}, threshold = {threshold}")
+                return key_len
+
+    def decrypt_key(key_len: int, normalized_text: str):
+        blocks = []
+        for i in range(key_len):
+            block = normalized_text[i::key_len]
+            blocks.append(block)
+
+        ru_letter_freq, _ = analyze_text_file("big_russian.txt")
+        top_russian_letters = [l for l, _ in ru_letter_freq.most_common(3)]
+        key_candidates = []
+
+        most_common_ru_letter = ru_letter_freq.most_common(1)[0][0]
+        most_common_ru_letter_index = RU_ALPHABET_LOW.index(most_common_ru_letter)
+
+        key_str = []
+        for block in blocks:
+            enc_letter_freq = count_letter_frequencies(block)
+            most_common_letter = enc_letter_freq.most_common(1)[0][0]
+            most_common_letter_index = RU_ALPHABET_LOW.index(most_common_letter)
+            letter_pos = (most_common_letter_index - most_common_ru_letter_index) % len(RU_ALPHABET_CAP)
+
+            key_str.append(RU_ALPHABET_LOW[letter_pos])
+
+        return ''.join(key_str)
+
+    # Extract data from text
     encrypted_text = read_file(file_path)
+    # Normalize, trim etc...
     norm_text = normalize_text(encrypted_text)
+    # Find key len
+    k_len = calculate_key_length(normalized_text=norm_text)
+    # Find key val
+    key_found = decrypt_key(k_len, norm_text)
+    print(f"Found key: {key_found}")
+    return key_found
 
     # key_len = find_key_length(norm_text)
     #
@@ -158,11 +171,13 @@ if __name__ == "__main__":
     decV = f"decV_{file_name}"
     crkV = f"crkV_{file_name}"
 
-    key = "ключ"
+    key = "лор"
     matrix = generate_vigenere_matrix(toss_letters=False, capital_letters=False)
 
     write_file(encV, encrypt_msg_by_vigenere(file_name, key, matrix))
     write_file(decV, decrypt_msg_by_vigenere(encV, key, matrix))
-    write_file(crkV, crack_vigenere_cipher(encV, matrix))
+
+    cracked_key = crack_vigenere_cipher(encV)
+    write_file(crkV, decrypt_msg_by_vigenere(encV, cracked_key, matrix))
 
     preview_files(file_name, encV, decV, crkV, lines_to_display=5)

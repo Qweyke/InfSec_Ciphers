@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from auxiliary import read_file
 
 
-def normalize_text(text):
+def normalize_text(text) -> str:
     return re.sub(r'[^а-яё]', '', text.lower())
 
 
