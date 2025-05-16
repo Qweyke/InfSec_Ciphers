@@ -159,7 +159,7 @@ if __name__ == "__main__":
     decV = f"decV_{file_name}"
     crkV = f"crkV_{file_name}"
 
-    key = "лор"
+    key = "ключик"
     matrix = generate_vigenere_matrix(toss_letters=False, capital_letters=False)
 
     write_file(encV, encrypt_msg_by_vigenere(file_name, key, matrix))
